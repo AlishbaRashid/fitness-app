@@ -39,10 +39,21 @@ class WorkoutDetailPage extends StatelessWidget {
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            Text(
-              '${exercises.length} exercises to complete',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
+            workoutId == null
+                ? Text(
+                    '${exercises.length} exercises to complete',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  )
+                : StreamBuilder<List<Exercise>>(
+                    stream: FirestoreService.instance.watchExercises(workoutId),
+                    builder: (context, snapshot) {
+                      final count = (snapshot.data ?? []).length;
+                      return Text(
+                        '$count exercises to complete',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      );
+                    },
+                  ),
             const SizedBox(height: 20),
             Expanded(
               child: workoutId == null
@@ -56,7 +67,16 @@ class WorkoutDetailPage extends StatelessWidget {
                   : StreamBuilder<List<Exercise>>(
                       stream: FirestoreService.instance.watchExercises(workoutId),
                       builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return const Center(child: Text('Failed to load exercises'));
+                        }
                         final items = snapshot.data ?? [];
+                        if (items.isEmpty) {
+                          return const Center(child: Text('No exercises yet'));
+                        }
                         return ListView(
                           children: items
                               .map((e) => _exerciseTile(context, workoutType, {
@@ -182,7 +202,7 @@ class WorkoutDetailPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: _getWorkoutColor(
                   workoutType,
-                ).withOpacity(0.2),
+                ).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(

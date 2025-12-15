@@ -186,6 +186,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
+      useRootNavigator: true,
       builder: (BuildContext context) {
         return const Dialog(
           backgroundColor: Colors.transparent,
@@ -198,6 +199,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
       },
     );
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    var loaderDismissed = false;
 
     try {
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -208,25 +211,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
       await FirestoreService.instance.setUserProfile(
         UserProfile(uid: uid, name: nameController.text.trim(), email: cred.user?.email),
       );
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Account created successfully! Welcome ${nameController.text}!',
-          ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      if (rootNav.canPop()) {
+        rootNav.pop();
+        loaderDismissed = true;
+      }
+      rootNav.pushNamedAndRemoveUntil('/home', (route) => false);
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      Navigator.of(context).pop();
+      if (rootNav.canPop()) {
+        rootNav.pop();
+        loaderDismissed = true;
+      }
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.message ?? 'Account creation failed'),
@@ -235,6 +230,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      if (rootNav.canPop()) {
+        if (!loaderDismissed) {
+          rootNav.pop();
+        }
+      }
     }
   }
 

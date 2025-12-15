@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:term_project/services/firestore_service.dart';
 import 'package:term_project/models/user_profile.dart';
+import 'package:term_project/models/workout.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -31,35 +32,72 @@ class ProfilePage extends StatelessWidget {
         child: Column(
           children: [
             // Profile Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
+            StreamBuilder<UserProfile?>(
+              stream: FirestoreService.instance.watchCurrentUserProfile(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Container(
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.blue.shade100,
-                      border: Border.all(color: Colors.blue.shade300, width: 2),
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                    child: Icon(
-                      Icons.person,
-                      color: Colors.blue.shade700,
-                      size: 40,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.blue.shade100,
+                            border: Border.all(color: Colors.blue.shade300, width: 2),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        const Expanded(
+                          child: SizedBox(
+                            height: 20,
+                            child: LinearProgressIndicator(),
+                          ),
+                        ),
+                      ],
                     ),
+                  );
+                }
+                final profile = snapshot.data;
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(15),
                   ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: StreamBuilder<UserProfile?>(
-                      stream: FirestoreService.instance.watchCurrentUserProfile(),
-                      builder: (context, snapshot) {
-                        final profile = snapshot.data;
-                        return Column(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.blue.shade100,
+                          border: Border.all(color: Colors.blue.shade300, width: 2),
+                          image: profile?.avatarUrl != null && profile!.avatarUrl!.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(profile.avatarUrl!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: profile?.avatarUrl == null || profile!.avatarUrl!.isEmpty
+                            ? Icon(
+                                Icons.person,
+                                color: Colors.blue.shade700,
+                                size: 40,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
@@ -71,7 +109,7 @@ class ProfilePage extends StatelessWidget {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              profile?.email ?? '',
+                              profile?.email ?? (FirebaseAuth.instance.currentUser?.email ?? ''),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.blue.shade700,
@@ -83,62 +121,76 @@ class ProfilePage extends StatelessWidget {
                               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                             ),
                           ],
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.edit, color: Colors.blue.shade700),
+                        onPressed: () {
+                          _showEditProfileDialog(context);
+                        },
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: Icon(Icons.edit, color: Colors.blue.shade700),
-                    onPressed: () {
-                      _showEditProfileDialog(context);
-                    },
-                  ),
-                ],
-              ),
+                );
+              },
             ),
 
             const SizedBox(height: 30),
 
-            // Stats Overview
             const Text(
               'Your Stats',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 1.3,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-              children: [
-                _buildStatCard(
-                  'Workouts Completed',
-                  '24',
-                  Icons.check_circle,
-                  Colors.green,
-                ),
-                _buildStatCard(
-                  'Total Time',
-                  '12h 30m',
-                  Icons.timer,
-                  Colors.blue,
-                ),
-                _buildStatCard(
-                  'Current Streak',
-                  '7 days',
-                  Icons.local_fire_department,
-                  Colors.orange,
-                ),
-                _buildStatCard(
-                  'Calories Burned',
-                  '4,200',
-                  Icons.whatshot,
-                  Colors.red,
-                ),
-              ],
+            StreamBuilder<List<Workout>>(
+              stream: FirestoreService.instance.watchWorkouts(),
+              builder: (context, snapshot) {
+                final workouts = snapshot.data ?? [];
+                final count = workouts.length;
+                int totalMinutes = 0;
+                for (final w in workouts) {
+                  totalMinutes += w.durationMinutes ?? 0;
+                }
+                final totalHours = (totalMinutes / 60).floor();
+                final remainingMinutes = totalMinutes % 60;
+                final totalTimeStr = totalMinutes == 0
+                    ? '0m'
+                    : '${totalHours > 0 ? '${totalHours}h ' : ''}${remainingMinutes}m';
+                return GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.3,
+                  crossAxisSpacing: 15,
+                  mainAxisSpacing: 15,
+                  children: [
+                    _buildStatCard(
+                      'Workouts Saved',
+                      '$count',
+                      Icons.check_circle,
+                      Colors.green,
+                    ),
+                    _buildStatCard(
+                      'Total Planned Time',
+                      totalTimeStr,
+                      Icons.timer,
+                      Colors.blue,
+                    ),
+                    _buildStatCard(
+                      'Current Streak',
+                      '—',
+                      Icons.local_fire_department,
+                      Colors.orange,
+                    ),
+                    _buildStatCard(
+                      'Calories Burned',
+                      '—',
+                      Icons.whatshot,
+                      Colors.red,
+                    ),
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 30),
@@ -251,6 +303,7 @@ class ProfilePage extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
+                  if (!context.mounted) return;
                   _showLogoutDialog(context);
                 },
                 style: OutlinedButton.styleFrom(
@@ -280,7 +333,7 @@ class ProfilePage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
@@ -301,7 +354,7 @@ class ProfilePage extends StatelessWidget {
             title,
             style: TextStyle(
               fontSize: 12,
-              color: color.withOpacity(0.8),
+              color: color.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -321,7 +374,7 @@ class ProfilePage extends StatelessWidget {
       width: 150,
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: unlocked ? color.withOpacity(0.1) : Colors.grey.shade100,
+        color: unlocked ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: unlocked ? color : Colors.grey.shade300,
@@ -351,7 +404,7 @@ class ProfilePage extends StatelessWidget {
             description,
             style: TextStyle(
               fontSize: 10,
-              color: unlocked ? color.withOpacity(0.8) : Colors.grey,
+              color: unlocked ? color.withValues(alpha: 0.8) : Colors.grey,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -373,12 +426,12 @@ class ProfilePage extends StatelessWidget {
         leading: Container(
           width: 40,
           height: 40,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color),
-        ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, color: color),
+    ),
         title: Text(
           title,
           style: const TextStyle(fontWeight: FontWeight.w500),
@@ -389,39 +442,66 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  void _showEditProfileDialog(BuildContext context) {
+  Future<void> _showEditProfileDialog(BuildContext context) async {
+    final existing = await FirestoreService.instance.getCurrentUserProfile();
+    if (!context.mounted) return;
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final emailCtrl = TextEditingController(text: existing?.email ?? (FirebaseAuth.instance.currentUser?.email ?? ''));
+    final avatarCtrl = TextEditingController(text: existing?.avatarUrl ?? '');
+    final heightCtrl = TextEditingController(text: existing?.heightCm?.toString() ?? '');
+    final weightCtrl = TextEditingController(text: existing?.weightKg?.toString() ?? '');
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Edit Profile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-                controller: TextEditingController(),
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: emailCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-                controller: TextEditingController(),
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Fitness Level',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: avatarCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Profile Image URL',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-                controller: TextEditingController(),
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: heightCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Height (cm)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: weightCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Weight (kg)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -431,18 +511,56 @@ class ProfilePage extends StatelessWidget {
             ElevatedButton(
               onPressed: () async {
                 final uid = FirebaseAuth.instance.currentUser?.uid;
-                Navigator.of(context).pop();
-                if (uid != null) {
+                if (uid == null) {
+                  final nav = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  nav.pop();
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Not authenticated'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                final nav = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(child: CircularProgressIndicator()),
+                );
+                try {
+                  final height = double.tryParse(heightCtrl.text.trim());
+                  final weight = double.tryParse(weightCtrl.text.trim());
                   await FirestoreService.instance.setUserProfile(
-                    UserProfile(uid: uid),
+                    UserProfile(
+                      uid: uid,
+                      name: nameCtrl.text.trim().isEmpty ? null : nameCtrl.text.trim(),
+                      email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+                      avatarUrl: avatarCtrl.text.trim().isEmpty ? null : avatarCtrl.text.trim(),
+                      heightCm: height,
+                      weightKg: weight,
+                    ),
+                  );
+                  nav.pop();
+                  nav.pop();
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Profile updated successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  nav.pop();
+                  nav.pop();
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to update profile: $e'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Profile updated successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
               },
               child: const Text('Save'),
             ),

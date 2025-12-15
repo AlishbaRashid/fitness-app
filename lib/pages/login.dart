@@ -155,10 +155,13 @@ class _LoginScreenState extends State<LoginScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
+      useRootNavigator: true,
       builder: (BuildContext context) {
         return const Center(child: CircularProgressIndicator());
       },
     );
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    var loaderDismissed = false;
 
     try {
       final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -171,26 +174,32 @@ class _LoginScreenState extends State<LoginScreen> {
           UserProfile(uid: uid, email: cred.user?.email),
         );
       }
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Login successful!'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (rootNav.canPop()) {
+        rootNav.pop();
+        loaderDismissed = true;
+      }
+      rootNav.pushNamedAndRemoveUntil('/home', (route) => false);
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? 'Login failed'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (rootNav.canPop()) {
+        rootNav.pop();
+        loaderDismissed = true;
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? 'Login failed'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      // Always dismiss the loader, even if navigation occurs or errors happen
+      if (rootNav.canPop()) {
+        if (!loaderDismissed) {
+          rootNav.pop();
+        }
+      }
     }
   }
 

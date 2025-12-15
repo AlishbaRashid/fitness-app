@@ -30,9 +30,26 @@ class WorkoutsPage extends StatelessWidget {
             StreamBuilder<List<Workout>>(
               stream: FirestoreService.instance.watchWorkouts(),
               builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return const Text('Failed to load workouts');
+                }
                 final items = snapshot.data ?? [];
                 if (items.isEmpty) {
-                  return const Text('No workouts yet');
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('No workouts yet'),
+                    ),
+                  );
                 }
                 return Column(
                   children: items
@@ -191,7 +208,7 @@ class WorkoutsPage extends StatelessWidget {
                   subtitle,
                   style: TextStyle(
                     fontSize: 14,
-                    color: textColor.withOpacity(0.8),
+                    color: textColor.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -200,7 +217,7 @@ class WorkoutsPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: textColor.withOpacity(0.1),
+              color: textColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
