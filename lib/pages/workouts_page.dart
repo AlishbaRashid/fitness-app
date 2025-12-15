@@ -1,6 +1,8 @@
 // [file name]: workouts_page.dart
 // [file content begin]
 import 'package:flutter/material.dart';
+import 'package:term_project/services/firestore_service.dart';
+import 'package:term_project/models/workout.dart';
 
 class WorkoutsPage extends StatelessWidget {
   const WorkoutsPage({super.key});
@@ -20,37 +22,42 @@ class WorkoutsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Saved Workouts
             const Text(
-              'Saved Workouts',
+              'My Workouts',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-            _buildSavedWorkoutCard(
-              'Morning Routine',
-              'Cardio + Core',
-              '30 min',
-              Colors.orange.shade50,
-              Colors.orange,
-              Icons.sunny,
-            ),
-            const SizedBox(height: 10),
-            _buildSavedWorkoutCard(
-              'Evening Stretch',
-              'Full Body Stretch',
-              '25 min',
-              Colors.purple.shade50,
-              Colors.purple,
-              Icons.nightlight,
-            ),
-            const SizedBox(height: 10),
-            _buildSavedWorkoutCard(
-              'Weekend Challenge',
-              'HIIT Workout',
-              '45 min',
-              Colors.red.shade50,
-              Colors.red,
-              Icons.bolt,
+            StreamBuilder<List<Workout>>(
+              stream: FirestoreService.instance.watchWorkouts(),
+              builder: (context, snapshot) {
+                final items = snapshot.data ?? [];
+                if (items.isEmpty) {
+                  return const Text('No workouts yet');
+                }
+                return Column(
+                  children: items
+                      .map(
+                        (w) => GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/workout_detail',
+                              arguments: {'workoutId': w.id, 'title': w.title},
+                            );
+                          },
+                          child: _buildSavedWorkoutCard(
+                            w.title,
+                            w.description ?? '',
+                            w.durationMinutes != null ? '${w.durationMinutes} min' : '',
+                            Colors.blue.shade50,
+                            Colors.blue,
+                            Icons.fitness_center,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
             ),
 
             const SizedBox(height: 30),
@@ -252,24 +259,48 @@ class WorkoutsPage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final titleCtrl = TextEditingController();
+        final descCtrl = TextEditingController();
+        final durationCtrl = TextEditingController();
         return AlertDialog(
-          title: const Text('Create Custom Workout'),
+          title: const Text('Create Workout'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('This feature will allow you to:'),
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
               const SizedBox(height: 10),
-              _buildFeatureItem('Select exercises from all categories'),
-              _buildFeatureItem('Set custom durations and repetitions'),
-              _buildFeatureItem('Save and schedule your workouts'),
-              _buildFeatureItem('Track your progress over time'),
+              TextField(
+                controller: descCtrl,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: durationCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Duration (minutes)'),
+              ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final w = Workout(
+                  id: '',
+                  title: titleCtrl.text.trim(),
+                  description: descCtrl.text.trim(),
+                  durationMinutes: int.tryParse(durationCtrl.text.trim()),
+                );
+                Navigator.of(context).pop();
+                await FirestoreService.instance.createWorkout(w);
+              },
+              child: const Text('Create'),
             ),
           ],
         );
@@ -277,18 +308,6 @@ class WorkoutsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.check_circle, color: Colors.green.shade600, size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text)),
-        ],
-      ),
-    );
-  }
+ 
 }
 // [file content end]

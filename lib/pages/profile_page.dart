@@ -1,6 +1,9 @@
 // [file name]: profile_page.dart
 // [file content begin]
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:term_project/services/firestore_service.dart';
+import 'package:term_project/models/user_profile.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -52,30 +55,36 @@ class ProfilePage extends StatelessWidget {
                   ),
                   const SizedBox(width: 20),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'John Doe',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          'Beginner Level',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          'Member since Jan 2024',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
+                    child: StreamBuilder<UserProfile?>(
+                      stream: FirestoreService.instance.watchCurrentUserProfile(),
+                      builder: (context, snapshot) {
+                        final profile = snapshot.data;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              profile?.name ?? (FirebaseAuth.instance.currentUser?.email ?? 'User'),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              profile?.email ?? '',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              'Member',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   IconButton(
@@ -240,7 +249,8 @@ class ProfilePage extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () {
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
                   _showLogoutDialog(context);
                 },
                 style: OutlinedButton.styleFrom(
@@ -393,6 +403,7 @@ class ProfilePage extends StatelessWidget {
                   labelText: 'Name',
                   border: OutlineInputBorder(),
                 ),
+                controller: TextEditingController(),
               ),
               const SizedBox(height: 15),
               TextField(
@@ -400,6 +411,7 @@ class ProfilePage extends StatelessWidget {
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
+                controller: TextEditingController(),
               ),
               const SizedBox(height: 15),
               TextField(
@@ -407,6 +419,7 @@ class ProfilePage extends StatelessWidget {
                   labelText: 'Fitness Level',
                   border: OutlineInputBorder(),
                 ),
+                controller: TextEditingController(),
               ),
             ],
           ),
@@ -416,8 +429,14 @@ class ProfilePage extends StatelessWidget {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                final uid = FirebaseAuth.instance.currentUser?.uid;
                 Navigator.of(context).pop();
+                if (uid != null) {
+                  await FirestoreService.instance.setUserProfile(
+                    UserProfile(uid: uid),
+                  );
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Profile updated successfully!'),

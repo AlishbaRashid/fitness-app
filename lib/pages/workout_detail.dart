@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:term_project/services/firestore_service.dart';
+import 'package:term_project/models/exercise.dart';
 
 class WorkoutDetailPage extends StatelessWidget {
   const WorkoutDetailPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final String workoutType = args['workoutType'];
-    final List<Map<String, dynamic>> exercises = args['exercises'];
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final String? workoutId = args['workoutId'] as String?;
+    final String workoutType = args['workoutType'] ?? args['title'];
+    final List<Map<String, dynamic>> exercises = args['exercises'] ?? [];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -18,6 +20,15 @@ class WorkoutDetailPage extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
+      floatingActionButton: workoutId == null
+          ? null
+          : FloatingActionButton(
+              onPressed: () {
+                _showAddExerciseDialog(context, workoutId);
+              },
+              backgroundColor: _getWorkoutColor(workoutType),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -34,87 +45,30 @@ class WorkoutDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: ListView.builder(
-                itemCount: exercises.length,
-                itemBuilder: (context, index) {
-                  final exercise = exercises[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/exercise_detail',
-                        arguments: {'exercise': exercise},
-                      );
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 15),
-                      padding: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: _getWorkoutColor(
-                                workoutType,
-                              ).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              exercise['icon'] ?? Icons.fitness_center,
-                              color: _getWorkoutColor(workoutType),
-                              size: 30,
-                            ),
-                          ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  exercise['name'],
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  '${exercise['duration']} • ${exercise['reps']}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  exercise['description'],
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[500],
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.grey[400],
-                            size: 16,
-                          ),
-                        ],
-                      ),
+              child: workoutId == null
+                  ? ListView.builder(
+                      itemCount: exercises.length,
+                      itemBuilder: (context, index) {
+                        final exercise = exercises[index];
+                        return _exerciseTile(context, workoutType, exercise);
+                      },
+                    )
+                  : StreamBuilder<List<Exercise>>(
+                      stream: FirestoreService.instance.watchExercises(workoutId),
+                      builder: (context, snapshot) {
+                        final items = snapshot.data ?? [];
+                        return ListView(
+                          children: items
+                              .map((e) => _exerciseTile(context, workoutType, {
+                                    'name': e.name,
+                                    'duration': e.sets != null ? '${e.sets} sets' : '',
+                                    'reps': e.reps != null ? '${e.reps} reps' : '',
+                                    'description': e.notes ?? '',
+                                  }))
+                              .toList(),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -122,7 +76,6 @@ class WorkoutDetailPage extends StatelessWidget {
               height: 55,
               child: ElevatedButton(
                 onPressed: () {
-                  // Start workout functionality
                   _startWorkout(context, workoutType, exercises);
                 },
                 style: ElevatedButton.styleFrom(
@@ -204,6 +157,83 @@ class WorkoutDetailPage extends StatelessWidget {
     );
   }
 
+  Widget _exerciseTile(BuildContext context, String workoutType, Map<String, dynamic> exercise) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/exercise_detail',
+          arguments: {'exercise': exercise},
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: _getWorkoutColor(
+                  workoutType,
+                ).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                exercise['icon'] ?? Icons.fitness_center,
+                color: _getWorkoutColor(workoutType),
+                size: 30,
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    exercise['name'],
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '${exercise['duration']} • ${exercise['reps']}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    exercise['description'],
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.grey[400],
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   String _calculateTotalTime(List<Map<String, dynamic>> exercises) {
     int totalSeconds = 0;
     for (var exercise in exercises) {
@@ -228,6 +258,67 @@ class WorkoutDetailPage extends StatelessWidget {
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  void _showAddExerciseDialog(BuildContext context, String workoutId) {
+    final nameCtrl = TextEditingController();
+    final setsCtrl = TextEditingController();
+    final repsCtrl = TextEditingController();
+    final notesCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Exercise'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: setsCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Sets'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: repsCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Reps'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(labelText: 'Notes'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final ex = Exercise(
+                  id: '',
+                  name: nameCtrl.text.trim(),
+                  sets: int.tryParse(setsCtrl.text.trim()),
+                  reps: int.tryParse(repsCtrl.text.trim()),
+                  notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                );
+                Navigator.of(context).pop();
+                await FirestoreService.instance.createExercise(workoutId, ex);
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

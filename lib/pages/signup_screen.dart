@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:term_project/services/firestore_service.dart';
+import 'package:term_project/models/user_profile.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -179,8 +182,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  void _createAccount(BuildContext context) {
-    // Show loading indicator
+  Future<void> _createAccount(BuildContext context) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -197,15 +199,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
       },
     );
 
-    // Simulate API call delay for account creation
-    Future.delayed(const Duration(seconds: 2), () {
-      // Close loading dialog
+    try {
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+      final uid = cred.user!.uid;
+      await FirestoreService.instance.setUserProfile(
+        UserProfile(uid: uid, name: nameController.text.trim(), email: cred.user?.email),
+      );
+      if (!mounted) return;
       Navigator.of(context).pop();
-
-      // Successful account creation - navigate to home and clear back stack
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-
-      // Show success message - FIXED: Removed the newline character in the string
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -219,7 +224,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         ),
       );
-    });
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Account creation failed'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override

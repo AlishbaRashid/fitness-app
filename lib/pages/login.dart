@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:term_project/services/firestore_service.dart';
+import 'package:term_project/models/user_profile.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -148,8 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _loginUser(BuildContext context) {
-    // Show loading indicator
+  Future<void> _loginUser(BuildContext context) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -158,36 +160,38 @@ class _LoginScreenState extends State<LoginScreen> {
       },
     );
 
-    // Simulate API call delay
-    Future.delayed(const Duration(seconds: 2), () {
-      // Close loading dialog
-      Navigator.of(context).pop();
-
-      // Check credentials (in real app, this would be API call)
-      if (emailController.text.isNotEmpty &&
-          passwordController.text.isNotEmpty) {
-        // Successful login - navigate to home and clear back stack
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Login successful!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      } else {
-        // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid email or password'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
-          ),
+    try {
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+      final uid = cred.user?.uid;
+      if (uid != null) {
+        await FirestoreService.instance.setUserProfile(
+          UserProfile(uid: uid, email: cred.user?.email),
         );
       }
-    });
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Login successful!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Login failed'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override

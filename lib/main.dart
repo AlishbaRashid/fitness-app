@@ -9,7 +9,15 @@ import 'package:term_project/pages/search_page.dart';
 import 'package:term_project/pages/workouts_page.dart';
 import 'package:term_project/pages/profile_page.dart';
 
-void main() {
+import 'package:firebase_core/firebase_core.dart';
+import 'package:term_project/firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  print("🔥 Firebase Connected Successfully");
   runApp(const MyApp());
 }
 
