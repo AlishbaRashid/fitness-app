@@ -1,376 +1,22 @@
+// [file name]: home.dart
+// [file content begin]
+import 'dart:async';
 import 'package:flutter/material.dart';
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
   const Home({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with greeting and profile
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Hello",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        "Let's check your activity",
-                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.blue.shade100,
-                      border: Border.all(color: Colors.blue.shade300, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.fitness_center,
-                      color: Colors.blue.shade700,
-                      size: 30,
-                    ),
-                  ),
-                ],
-              ),
+  State<Home> createState() => _HomeState();
+}
 
-              const SizedBox(height: 30),
+class _HomeState extends State<Home> {
+  // Progress tracking variables
+  int _finishedWorkouts = 0;
+  int _workoutsInProgress = 0;
+  double _timeSpentMinutes = 0.0;
 
-              // Stats Cards
-              Row(
-                children: [
-                  // Finished Card
-                  Expanded(
-                    child: _buildStatCard(
-                      "Finished",
-                      "0",
-                      "Completed\nWorkouts",
-                      Colors.blue.shade50,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  // In Progress Card
-                  Expanded(
-                    child: _buildStatCard(
-                      "In progress",
-                      "0",
-                      "Workouts",
-                      Colors.orange.shade50,
-                      Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 15),
-
-              // Time Spent Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Time spent",
-                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "0.0 Minutes",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade800,
-                          ),
-                        ),
-                        Icon(
-                          Icons.timer_outlined,
-                          color: Colors.green.shade800,
-                          size: 30,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              // Discover New Workouts
-              Text(
-                "Discover new workouts",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
-
-              const SizedBox(height: 15),
-
-              // Workout Cards - Fixed height to prevent overflow
-              SizedBox(
-                height: 180, // Fixed height for the scrollable row
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      // Cardio Workout Card
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/workout_detail',
-                            arguments: {
-                              'workoutType': 'Cardio',
-                              'exercises': _getCardioExercises(),
-                            },
-                          );
-                        },
-                        child: _buildWorkoutCard(
-                          "Cardio",
-                          "4 Exercises",
-                          "30 Minutes",
-                          Colors.orange.shade100,
-                          Colors.orange,
-                          Icons.directions_run,
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      // Arm Workout Card
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/workout_detail',
-                            arguments: {
-                              'workoutType': 'Arm',
-                              'exercises': _getArmExercises(),
-                            },
-                          );
-                        },
-                        child: _buildWorkoutCard(
-                          "Arm",
-                          "4 Exercises",
-                          "25 Minutes",
-                          Colors.blue.shade100,
-                          Colors.blue,
-                          Icons.fitness_center,
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      // Leg Workout Card
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/workout_detail',
-                            arguments: {
-                              'workoutType': 'Leg',
-                              'exercises': _getLegExercises(),
-                            },
-                          );
-                        },
-                        child: _buildWorkoutCard(
-                          "Leg",
-                          "4 Exercises",
-                          "28 Minutes",
-                          Colors.purple.shade100,
-                          Colors.purple,
-                          Icons.directions_walk,
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      // Core Workout Card
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/workout_detail',
-                            arguments: {
-                              'workoutType': 'Core',
-                              'exercises': _getCoreExercises(),
-                            },
-                          );
-                        },
-                        child: _buildWorkoutCard(
-                          "Core",
-                          "4 Exercises",
-                          "22 Minutes",
-                          Colors.green.shade100,
-                          Colors.green,
-                          Icons.self_improvement,
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      // Full Body Workout Card
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/workout_detail',
-                            arguments: {
-                              'workoutType': 'Full Body',
-                              'exercises': _getFullBodyExercises(),
-                            },
-                          );
-                        },
-                        child: _buildWorkoutCard(
-                          "Full Body",
-                          "4 Exercises",
-                          "35 Minutes",
-                          Colors.red.shade100,
-                          Colors.red,
-                          Icons.accessibility_new,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              // Top Workouts
-              Text(
-                "Top Workouts",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-              ),
-
-              const SizedBox(height: 15),
-
-              // Workout List - Make clickable
-              Column(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/exercise_detail',
-                        arguments: {'exercise': _getSquatExercise()},
-                      );
-                    },
-                    child: _buildWorkoutItem(
-                      "Squats",
-                      "2 sets | 10 Repetition",
-                      "10:00",
-                      Icons.fitness_center,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/exercise_detail',
-                        arguments: {'exercise': _getPushUpExercise()},
-                      );
-                    },
-                    child: _buildWorkoutItem(
-                      "Push Ups",
-                      "3 sets | 15 Repetition",
-                      "15:00",
-                      Icons.self_improvement,
-                      Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/exercise_detail',
-                        arguments: {'exercise': _getPlankExercise()},
-                      );
-                    },
-                    child: _buildWorkoutItem(
-                      "Plank",
-                      "3 sets | 30 Seconds",
-                      "5:00",
-                      Icons.timer,
-                      Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      // Update the onTap method in home.dart (bottomNavigationBar)
-bottomNavigationBar: BottomNavigationBar(
-  type: BottomNavigationBarType.fixed,
-  currentIndex: 0,
-  onTap: (index) {
-    if (index == 0) {
-      Navigator.pushNamedAndRemoveUntil(
-        context, 
-        '/home', 
-        (route) => false
-      );
-    } else if (index == 1) {
-      Navigator.pushNamed(context, '/search');
-    } else if (index == 2) {
-      Navigator.pushNamed(context, '/workouts');
-    } else if (index == 3) {
-      Navigator.pushNamed(context, '/profile');
-    }
-  },
-  items: const [
-    BottomNavigationBarItem(
-      icon: Icon(Icons.home, color: Colors.blue),
-      label: 'Home',
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.search, color: Colors.grey),
-      label: 'Search',
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.fitness_center, color: Colors.grey),
-      label: 'Workouts',
-    ),
-    BottomNavigationBarItem(
-      icon: Icon(Icons.person, color: Colors.grey),
-      label: 'Profile',
-    ),
-  ],
-),
-    );
-  }
-
-  // Exercise data methods
+  // Exercise data methods (keep them as they were)
   List<Map<String, dynamic>> _getCardioExercises() {
     return [
       {
@@ -720,6 +366,421 @@ bottomNavigationBar: BottomNavigationBar(
     };
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _loadProgress();
+  }
+
+  void _loadProgress() {
+    // In a real app, you would load from SharedPreferences or database
+    // For now, we'll use example data
+    setState(() {
+      _finishedWorkouts = 5; // Example: 5 completed workouts
+      _workoutsInProgress = 2; // Example: 2 workouts in progress
+      _timeSpentMinutes = 125.5; // Example: 125.5 minutes total
+    });
+  }
+
+  void _updateProgress(int workoutsCompleted, double additionalTime) {
+    setState(() {
+      _finishedWorkouts += workoutsCompleted;
+      _timeSpentMinutes += additionalTime;
+      if (workoutsCompleted > 0) {
+        _workoutsInProgress = _workoutsInProgress > 0
+            ? _workoutsInProgress - 1
+            : 0;
+      }
+    });
+
+    // In a real app, save to SharedPreferences or database here
+  }
+
+  void _startWorkoutSession(
+    BuildContext context,
+    String workoutType,
+    List<Map<String, dynamic>> exercises,
+  ) {
+    // Increment workouts in progress when starting
+    setState(() {
+      _workoutsInProgress++;
+    });
+
+    Navigator.pushNamed(
+      context,
+      '/workout_session',
+      arguments: {
+        'workoutType': workoutType,
+        'exercises': exercises,
+        'onWorkoutCompleted': (int workoutsCompleted, double timeSpent) {
+          // Update progress when workout is completed
+          _updateProgress(workoutsCompleted, timeSpent);
+        },
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with greeting and profile
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Hello",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        "Let's check your activity",
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/profile');
+                    },
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blue.shade100,
+                        border: Border.all(
+                          color: Colors.blue.shade300,
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.fitness_center,
+                        color: Colors.blue.shade700,
+                        size: 30,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+
+              // Stats Cards - UPDATED WITH DYNAMIC VALUES
+              Row(
+                children: [
+                  // Finished Card
+                  Expanded(
+                    child: _buildStatCard(
+                      "Finished",
+                      _finishedWorkouts.toString(),
+                      "Completed\nWorkouts",
+                      Colors.blue.shade50,
+                      Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  // In Progress Card
+                  Expanded(
+                    child: _buildStatCard(
+                      "In progress",
+                      _workoutsInProgress.toString(),
+                      "Workouts",
+                      Colors.orange.shade50,
+                      Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 15),
+
+              // Time Spent Card - UPDATED WITH DYNAMIC VALUE
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Time spent",
+                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "${_timeSpentMinutes.toStringAsFixed(1)} Minutes",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade800,
+                          ),
+                        ),
+                        Icon(
+                          Icons.timer_outlined,
+                          color: Colors.green.shade800,
+                          size: 30,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // Discover New Workouts
+              Text(
+                "Discover new workouts",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Workout Cards - Fixed height to prevent overflow
+              SizedBox(
+                height: 180, // Fixed height for the scrollable row
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      // Cardio Workout Card
+                      GestureDetector(
+                        onTap: () {
+                          // Start workout session directly
+                          _startWorkoutSession(
+                            context,
+                            'Cardio',
+                            _getCardioExercises(),
+                          );
+                        },
+                        child: _buildWorkoutCard(
+                          "Cardio",
+                          "4 Exercises",
+                          "30 Minutes",
+                          Colors.orange.shade100,
+                          Colors.orange,
+                          Icons.directions_run,
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      // Arm Workout Card
+                      GestureDetector(
+                        onTap: () {
+                          _startWorkoutSession(
+                            context,
+                            'Arm',
+                            _getArmExercises(),
+                          );
+                        },
+                        child: _buildWorkoutCard(
+                          "Arm",
+                          "4 Exercises",
+                          "25 Minutes",
+                          Colors.blue.shade100,
+                          Colors.blue,
+                          Icons.fitness_center,
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      // Leg Workout Card
+                      GestureDetector(
+                        onTap: () {
+                          _startWorkoutSession(
+                            context,
+                            'Leg',
+                            _getLegExercises(),
+                          );
+                        },
+                        child: _buildWorkoutCard(
+                          "Leg",
+                          "4 Exercises",
+                          "28 Minutes",
+                          Colors.purple.shade100,
+                          Colors.purple,
+                          Icons.directions_walk,
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      // Core Workout Card
+                      GestureDetector(
+                        onTap: () {
+                          _startWorkoutSession(
+                            context,
+                            'Core',
+                            _getCoreExercises(),
+                          );
+                        },
+                        child: _buildWorkoutCard(
+                          "Core",
+                          "4 Exercises",
+                          "22 Minutes",
+                          Colors.green.shade100,
+                          Colors.green,
+                          Icons.self_improvement,
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      // Full Body Workout Card
+                      GestureDetector(
+                        onTap: () {
+                          _startWorkoutSession(
+                            context,
+                            'Full Body',
+                            _getFullBodyExercises(),
+                          );
+                        },
+                        child: _buildWorkoutCard(
+                          "Full Body",
+                          "4 Exercises",
+                          "35 Minutes",
+                          Colors.red.shade100,
+                          Colors.red,
+                          Icons.accessibility_new,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // Top Workouts
+              Text(
+                "Top Workouts",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Workout List - Make clickable
+              Column(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/exercise_detail',
+                        arguments: {'exercise': _getSquatExercise()},
+                      );
+                    },
+                    child: _buildWorkoutItem(
+                      "Squats",
+                      "2 sets | 10 Repetition",
+                      "10:00",
+                      Icons.fitness_center,
+                      Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/exercise_detail',
+                        arguments: {'exercise': _getPushUpExercise()},
+                      );
+                    },
+                    child: _buildWorkoutItem(
+                      "Push Ups",
+                      "3 sets | 15 Repetition",
+                      "15:00",
+                      Icons.self_improvement,
+                      Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/exercise_detail',
+                        arguments: {'exercise': _getPlankExercise()},
+                      );
+                    },
+                    child: _buildWorkoutItem(
+                      "Plank",
+                      "3 sets | 30 Seconds",
+                      "5:00",
+                      Icons.timer,
+                      Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      // Update the onTap method in home.dart (bottomNavigationBar)
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: 0,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (route) => false,
+            );
+          } else if (index == 1) {
+            Navigator.pushNamed(context, '/search');
+          } else if (index == 2) {
+            Navigator.pushNamed(context, '/workouts');
+          } else if (index == 3) {
+            Navigator.pushNamed(context, '/profile');
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home, color: Colors.blue),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search, color: Colors.grey),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.fitness_center, color: Colors.grey),
+            label: 'Workouts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, color: Colors.grey),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatCard(
     String title,
     String value,
@@ -738,7 +799,7 @@ bottomNavigationBar: BottomNavigationBar(
         children: [
           Text(
             title,
-            style: TextStyle(fontSize: 14, color: textColor.withOpacity(0.8)),
+            style: TextStyle(fontSize: 14, color: textColor.withValues(alpha: 0.8)),
           ),
           const SizedBox(height: 10),
           Text(
@@ -752,7 +813,7 @@ bottomNavigationBar: BottomNavigationBar(
           const SizedBox(height: 5),
           Text(
             subtitle,
-            style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.8)),
+            style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
           ),
         ],
       ),
@@ -789,16 +850,16 @@ bottomNavigationBar: BottomNavigationBar(
           const SizedBox(height: 8),
           Text(
             exercises,
-            style: TextStyle(fontSize: 14, color: textColor.withOpacity(0.8)),
+            style: TextStyle(fontSize: 14, color: textColor.withValues(alpha: 0.8)),
           ),
           Text(
             time,
-            style: TextStyle(fontSize: 14, color: textColor.withOpacity(0.8)),
+            style: TextStyle(fontSize: 14, color: textColor.withValues(alpha: 0.8)),
           ),
           const Spacer(),
           Align(
             alignment: Alignment.bottomRight,
-            child: Icon(icon, size: 40, color: textColor.withOpacity(0.6)),
+            child: Icon(icon, size: 40, color: textColor.withValues(alpha: 0.6)),
           ),
         ],
       ),
@@ -820,7 +881,7 @@ bottomNavigationBar: BottomNavigationBar(
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 10,
             offset: const Offset(0, 2),
@@ -832,10 +893,10 @@ bottomNavigationBar: BottomNavigationBar(
           Container(
             width: 60,
             height: 60,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(10),
+          ),
             child: Icon(icon, color: color, size: 30),
           ),
           const SizedBox(width: 15),
@@ -860,10 +921,10 @@ bottomNavigationBar: BottomNavigationBar(
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(15),
-            ),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(15),
+          ),
             child: Row(
               children: [
                 Icon(Icons.timer_outlined, size: 16, color: color),
@@ -880,3 +941,4 @@ bottomNavigationBar: BottomNavigationBar(
     );
   }
 }
+// [file content end]

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:term_project/pages/workout_session.dart';
 import 'package:term_project/services/firestore_service.dart';
 import 'package:term_project/models/exercise.dart';
 
@@ -7,7 +8,8 @@ class WorkoutDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final String? workoutId = args['workoutId'] as String?;
     final String workoutType = args['workoutType'] ?? args['title'];
     final List<Map<String, dynamic>> exercises = args['exercises'] ?? [];
@@ -65,13 +67,20 @@ class WorkoutDetailPage extends StatelessWidget {
                       },
                     )
                   : StreamBuilder<List<Exercise>>(
-                      stream: FirestoreService.instance.watchExercises(workoutId),
+                      stream: FirestoreService.instance.watchExercises(
+                        workoutId,
+                      ),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
                         if (snapshot.hasError) {
-                          return const Center(child: Text('Failed to load exercises'));
+                          return const Center(
+                            child: Text('Failed to load exercises'),
+                          );
                         }
                         final items = snapshot.data ?? [];
                         if (items.isEmpty) {
@@ -79,12 +88,18 @@ class WorkoutDetailPage extends StatelessWidget {
                         }
                         return ListView(
                           children: items
-                              .map((e) => _exerciseTile(context, workoutType, {
-                                    'name': e.name,
-                                    'duration': e.sets != null ? '${e.sets} sets' : '',
-                                    'reps': e.reps != null ? '${e.reps} reps' : '',
-                                    'description': e.notes ?? '',
-                                  }))
+                              .map(
+                                (e) => _exerciseTile(context, workoutType, {
+                                  'name': e.name,
+                                  'duration': e.sets != null
+                                      ? '${e.sets} sets'
+                                      : '',
+                                  'reps': e.reps != null
+                                      ? '${e.reps} reps'
+                                      : '',
+                                  'description': e.notes ?? '',
+                                }),
+                              )
                               .toList(),
                         );
                       },
@@ -137,6 +152,8 @@ class WorkoutDetailPage extends StatelessWidget {
     }
   }
 
+  // Update in workout_detail.dart, replace the _startWorkout method:
+
   void _startWorkout(
     BuildContext context,
     String workoutType,
@@ -160,8 +177,30 @@ class WorkoutDetailPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // Navigate to workout session page or start timer
-                _showWorkoutStarted(context);
+                // Navigate to workout session page
+                // In workout_detail.dart, update the navigation to WorkoutSessionPage:
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WorkoutSessionPage(
+                      workoutType: workoutType,
+                      exercises: exercises,
+                      onWorkoutCompleted: (workoutsCompleted, timeSpent) {
+                        // This would ideally update the home screen
+                        // For now, we'll just show a message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Added $workoutsCompleted workout, spent ${timeSpent.toStringAsFixed(1)} minutes',
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: _getWorkoutColor(workoutType),
@@ -177,7 +216,11 @@ class WorkoutDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _exerciseTile(BuildContext context, String workoutType, Map<String, dynamic> exercise) {
+  Widget _exerciseTile(
+    BuildContext context,
+    String workoutType,
+    Map<String, dynamic> exercise,
+  ) {
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(
@@ -200,9 +243,7 @@ class WorkoutDetailPage extends StatelessWidget {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: _getWorkoutColor(
-                  workoutType,
-                ).withValues(alpha: 0.2),
+                color: _getWorkoutColor(workoutType).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -226,34 +267,25 @@ class WorkoutDetailPage extends StatelessWidget {
                   const SizedBox(height: 5),
                   Text(
                     '${exercise['duration']} • ${exercise['reps']}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 5),
                   Text(
                     exercise['description'],
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey[400],
-              size: 16,
-            ),
+            Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
           ],
         ),
       ),
     );
   }
+
   String _calculateTotalTime(List<Map<String, dynamic>> exercises) {
     int totalSeconds = 0;
     for (var exercise in exercises) {
@@ -329,7 +361,9 @@ class WorkoutDetailPage extends StatelessWidget {
                   name: nameCtrl.text.trim(),
                   sets: int.tryParse(setsCtrl.text.trim()),
                   reps: int.tryParse(repsCtrl.text.trim()),
-                  notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                  notes: notesCtrl.text.trim().isEmpty
+                      ? null
+                      : notesCtrl.text.trim(),
                 );
                 Navigator.of(context).pop();
                 await FirestoreService.instance.createExercise(workoutId, ex);

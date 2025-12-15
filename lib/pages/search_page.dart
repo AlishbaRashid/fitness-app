@@ -335,7 +335,7 @@ class _SearchPageState extends State<SearchPage> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
+                                color: Colors.grey.withValues(alpha: 0.1),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -349,7 +349,7 @@ class _SearchPageState extends State<SearchPage> {
                                 decoration: BoxDecoration(
                                   color: _getCategoryColor(
                                     exercise['category'],
-                                  ).withOpacity(0.2),
+                                  ).withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
@@ -401,7 +401,7 @@ class _SearchPageState extends State<SearchPage> {
                                 decoration: BoxDecoration(
                                   color: _getCategoryColor(
                                     exercise['category'],
-                                  ).withOpacity(0.1),
+                                  ).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(

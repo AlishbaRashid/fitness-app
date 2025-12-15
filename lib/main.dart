@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:term_project/pages/landing.dart';
 import 'package:term_project/pages/login.dart';
 import 'package:term_project/pages/signup_screen.dart';
@@ -6,6 +7,7 @@ import 'package:term_project/pages/home.dart';
 import 'package:term_project/pages/workout_detail.dart';
 import 'package:term_project/pages/exercise_detail.dart';
 import 'package:term_project/pages/search_page.dart';
+import 'package:term_project/pages/workout_session.dart';
 import 'package:term_project/pages/workouts_page.dart';
 import 'package:term_project/pages/profile_page.dart';
 
@@ -17,7 +19,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  print("🔥 Firebase Connected Successfully");
+  debugPrint("🔥 Firebase Connected Successfully");
   runApp(const MyApp());
 }
 
@@ -40,6 +42,8 @@ class MyApp extends StatelessWidget {
         '/search': (context) => const SearchPage(),
         '/workouts': (context) => const WorkoutsPage(),
         '/profile': (context) => const ProfilePage(),
+        '/workout_session': (context) => WorkoutSessionPage(workoutType: '', exercises: [],),
+
       },
     );
   }

@@ -173,7 +173,7 @@ class WorkoutsPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
           ),
@@ -264,7 +264,7 @@ class WorkoutsPage extends StatelessWidget {
             subtitle,
             style: TextStyle(
               fontSize: 14,
-              color: textColor.withOpacity(0.8),
+              color: textColor.withValues(alpha: 0.8),
             ),
           ),
         ],

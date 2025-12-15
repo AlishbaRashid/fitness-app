@@ -151,17 +151,17 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Future<void> _loginUser(BuildContext context) async {
+    Future<void> _loginUser(BuildContext context) async {
+    // Store the context before showing dialog
+    final BuildContext dialogContext = context;
+    
     showDialog(
-      context: context,
+      context: dialogContext,
       barrierDismissible: false,
-      useRootNavigator: true,
       builder: (BuildContext context) {
         return const Center(child: CircularProgressIndicator());
       },
     );
-    final rootNav = Navigator.of(context, rootNavigator: true);
-    var loaderDismissed = false;
 
     try {
       final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -174,32 +174,28 @@ class _LoginScreenState extends State<LoginScreen> {
           UserProfile(uid: uid, email: cred.user?.email),
         );
       }
-      if (rootNav.canPop()) {
-        rootNav.pop();
-        loaderDismissed = true;
-      }
-      rootNav.pushNamedAndRemoveUntil('/home', (route) => false);
+      
+      // Dismiss dialog first
+      Navigator.pop(dialogContext);
+      
+      // Then navigate to home
+      Navigator.pushNamedAndRemoveUntil(
+        dialogContext, 
+        '/home', 
+        (route) => false
+      );
+      
     } on FirebaseAuthException catch (e) {
-      if (rootNav.canPop()) {
-        rootNav.pop();
-        loaderDismissed = true;
-      }
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message ?? 'Login failed'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } finally {
-      // Always dismiss the loader, even if navigation occurs or errors happen
-      if (rootNav.canPop()) {
-        if (!loaderDismissed) {
-          rootNav.pop();
-        }
-      }
+      // Dismiss dialog on error
+      Navigator.pop(dialogContext);
+      
+      ScaffoldMessenger.of(dialogContext).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Login failed'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 

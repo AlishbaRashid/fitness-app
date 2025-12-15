@@ -183,61 +183,63 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _createAccount(BuildContext context) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      useRootNavigator: true,
-      builder: (BuildContext context) {
-        return const Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-            ),
+  // Store the context before showing dialog
+  final BuildContext dialogContext = context;
+  
+  showDialog(
+    context: dialogContext,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return const Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
           ),
-        );
-      },
-    );
-    final rootNav = Navigator.of(context, rootNavigator: true);
-    var loaderDismissed = false;
-
-    try {
-      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
-      final uid = cred.user!.uid;
-      await FirestoreService.instance.setUserProfile(
-        UserProfile(uid: uid, name: nameController.text.trim(), email: cred.user?.email),
-      );
-      if (rootNav.canPop()) {
-        rootNav.pop();
-        loaderDismissed = true;
-      }
-      rootNav.pushNamedAndRemoveUntil('/home', (route) => false);
-    } on FirebaseAuthException catch (e) {
-      if (rootNav.canPop()) {
-        rootNav.pop();
-        loaderDismissed = true;
-      }
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? 'Account creation failed'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
         ),
       );
-    } finally {
-      if (rootNav.canPop()) {
-        if (!loaderDismissed) {
-          rootNav.pop();
-        }
-      }
-    }
+    },
+  );
+
+  try {
+    final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
+    );
+    final uid = cred.user!.uid;
+    await FirestoreService.instance.setUserProfile(
+      UserProfile(
+        uid: uid, 
+        name: nameController.text.trim(), 
+        email: cred.user?.email
+      ),
+    );
+    
+    // Dismiss dialog first
+    Navigator.pop(dialogContext);
+    
+    // Then navigate to home
+    Navigator.pushNamedAndRemoveUntil(
+      dialogContext, 
+      '/home', 
+      (route) => false
+    );
+    
+  } on FirebaseAuthException catch (e) {
+    // Dismiss dialog on error
+    Navigator.pop(dialogContext);
+    
+    ScaffoldMessenger.of(dialogContext).showSnackBar(
+      SnackBar(
+        content: Text(e.message ?? 'Account creation failed'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
+}
 
   @override
   void dispose() {
