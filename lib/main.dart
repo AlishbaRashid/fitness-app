@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:term_project/pages/landing.dart';
 import 'package:term_project/pages/login.dart';
 import 'package:term_project/pages/signup_screen.dart';
@@ -10,7 +9,6 @@ import 'package:term_project/pages/search_page.dart';
 import 'package:term_project/pages/workout_session.dart';
 import 'package:term_project/pages/workouts_page.dart';
 import 'package:term_project/pages/profile_page.dart';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:term_project/firebase_options.dart';
 
@@ -42,8 +40,17 @@ class MyApp extends StatelessWidget {
         '/search': (context) => const SearchPage(),
         '/workouts': (context) => const WorkoutsPage(),
         '/profile': (context) => const ProfilePage(),
-        '/workout_session': (context) => WorkoutSessionPage(workoutType: '', exercises: [],),
-
+        '/workout_session': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+          final workoutType = args['workoutType'] as String? ?? 'Workout';
+          final exercises = (args['exercises'] as List<Map<String, dynamic>>?) ?? <Map<String, dynamic>>[];
+          final onWorkoutCompleted = args['onWorkoutCompleted'] as Function(int, double)?;
+          return WorkoutSessionPage(
+            workoutType: workoutType,
+            exercises: exercises,
+            onWorkoutCompleted: onWorkoutCompleted,
+          );
+        },
       },
     );
   }

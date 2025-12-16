@@ -4,8 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:term_project/services/firestore_service.dart';
 import 'package:term_project/models/workout.dart';
 
-class WorkoutsPage extends StatelessWidget {
+class WorkoutsPage extends StatefulWidget {
   const WorkoutsPage({super.key});
+
+  @override
+  State<WorkoutsPage> createState() => _WorkoutsPageState();
+}
+
+class _WorkoutsPageState extends State<WorkoutsPage> {
+  String? _selectedLevel; // null = All
 
   @override
   Widget build(BuildContext context) {
@@ -26,15 +33,43 @@ class WorkoutsPage extends StatelessWidget {
               'My Workouts',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _buildLevelChip('Beginner', Colors.green),
+                _buildLevelChip('Intermediate', Colors.blue),
+                _buildLevelChip('Advanced', Colors.red),
+                ChoiceChip(
+                  label: const Text('All'),
+                  selected: _selectedLevel == null,
+                  onSelected: (_) => setState(() => _selectedLevel = null),
+                ),
+              ],
+            ),
             const SizedBox(height: 15),
             StreamBuilder<List<Workout>>(
-              stream: FirestoreService.instance.watchWorkouts(),
+              stream: _selectedLevel == null
+                  ? FirestoreService.instance.watchWorkouts()
+                  : FirestoreService.instance.watchWorkoutsByLevel(_selectedLevel!),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return const Text('Failed to load workouts');
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Text(
+                      'No workouts available yet',
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  );
                 }
                 final items = snapshot.data ?? [];
                 if (items.isEmpty) {
@@ -51,83 +86,57 @@ class WorkoutsPage extends StatelessWidget {
                     ),
                   );
                 }
+                if (_selectedLevel == null) {
+                  final beginner = items.where((w) => (w.level ?? '').toLowerCase() == 'beginner').toList();
+                  final intermediate = items.where((w) => (w.level ?? '').toLowerCase() == 'intermediate').toList();
+                  final advanced = items.where((w) => (w.level ?? '').toLowerCase() == 'advanced').toList();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (beginner.isNotEmpty) ...[
+                        _levelHeader('Beginner', Colors.green),
+                        const SizedBox(height: 8),
+                        ...beginner.map((w) => _workoutTile(context, w, Colors.green)),
+                        const SizedBox(height: 20),
+                      ],
+                      if (intermediate.isNotEmpty) ...[
+                        _levelHeader('Intermediate', Colors.blue),
+                        const SizedBox(height: 8),
+                        ...intermediate.map((w) => _workoutTile(context, w, Colors.blue)),
+                        const SizedBox(height: 20),
+                      ],
+                      if (advanced.isNotEmpty) ...[
+                        _levelHeader('Advanced', Colors.red),
+                        const SizedBox(height: 8),
+                        ...advanced.map((w) => _workoutTile(context, w, Colors.red)),
+                      ],
+                    ],
+                  );
+                }
+                final color = _selectedLevel == 'Beginner'
+                    ? Colors.green
+                    : _selectedLevel == 'Intermediate'
+                        ? Colors.blue
+                        : Colors.red;
                 return Column(
-                  children: items
-                      .map(
-                        (w) => GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/workout_detail',
-                              arguments: {'workoutId': w.id, 'title': w.title},
-                            );
-                          },
-                          child: _buildSavedWorkoutCard(
-                            w.title,
-                            w.description ?? '',
-                            w.durationMinutes != null ? '${w.durationMinutes} min' : '',
-                            Colors.blue.shade50,
-                            Colors.blue,
-                            Icons.fitness_center,
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _levelHeader(_selectedLevel!, color),
+                    const SizedBox(height: 8),
+                    ListView.separated(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) =>
+                          _workoutTile(context, items[index], color),
+                    ),
+                  ],
                 );
               },
             ),
-
             const SizedBox(height: 30),
-
-            // Workout Categories
-            const Text(
-              'Workout Categories',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 15),
-
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 1.2,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-              children: [
-                _buildCategoryCard(
-                  'Beginner',
-                  '12 workouts',
-                  Colors.green.shade50,
-                  Colors.green,
-                  Icons.flag,
-                ),
-                _buildCategoryCard(
-                  'Intermediate',
-                  '18 workouts',
-                  Colors.blue.shade50,
-                  Colors.blue,
-                  Icons.trending_up,
-                ),
-                _buildCategoryCard(
-                  'Advanced',
-                  '8 workouts',
-                  Colors.red.shade50,
-                  Colors.red,
-                  Icons.fitness_center,
-                ),
-                _buildCategoryCard(
-                  'Quick Workouts',
-                  '10-15 min',
-                  Colors.orange.shade50,
-                  Colors.orange,
-                  Icons.timer,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            // Create New Workout Button
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -240,36 +249,7 @@ class WorkoutsPage extends StatelessWidget {
     Color textColor,
     IconData icon,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, size: 40, color: textColor),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 14,
-              color: textColor.withValues(alpha: 0.8),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   void _showCreateWorkoutDialog(BuildContext context) {
@@ -279,6 +259,7 @@ class WorkoutsPage extends StatelessWidget {
         final titleCtrl = TextEditingController();
         final descCtrl = TextEditingController();
         final durationCtrl = TextEditingController();
+        String level = 'Beginner';
         return AlertDialog(
           title: const Text('Create Workout'),
           content: Column(
@@ -299,6 +280,17 @@ class WorkoutsPage extends StatelessWidget {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Duration (minutes)'),
               ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: level,
+                decoration: const InputDecoration(labelText: 'Level'),
+                items: const [
+                  DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
+                  DropdownMenuItem(value: 'Intermediate', child: Text('Intermediate')),
+                  DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
+                ],
+                onChanged: (val) => level = val ?? 'Beginner',
+              ),
             ],
           ),
           actions: [
@@ -313,6 +305,7 @@ class WorkoutsPage extends StatelessWidget {
                   title: titleCtrl.text.trim(),
                   description: descCtrl.text.trim(),
                   durationMinutes: int.tryParse(durationCtrl.text.trim()),
+                  level: level,
                 );
                 Navigator.of(context).pop();
                 await FirestoreService.instance.createWorkout(w);
@@ -325,6 +318,58 @@ class WorkoutsPage extends StatelessWidget {
     );
   }
 
- 
+  ChoiceChip _buildLevelChip(String label, Color color) {
+    final selected = _selectedLevel == label;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      selectedColor: color.withValues(alpha: 0.15),
+      onSelected: (val) {
+        setState(() {
+          _selectedLevel = val ? label : null;
+        });
+      },
+    );
+  }
+
+  Widget _levelHeader(String label, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '$label Workouts',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _workoutTile(BuildContext context, Workout w, Color color) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/workout_detail',
+          arguments: {'workoutId': w.id, 'title': w.title},
+        );
+      },
+      child: _buildSavedWorkoutCard(
+        w.title,
+        w.description ?? (w.level ?? ''),
+        w.durationMinutes != null ? '${w.durationMinutes} min' : '',
+        color.withValues(alpha: 0.08),
+        color,
+        Icons.fitness_center,
+      ),
+    );
+  }
 }
 // [file content end]

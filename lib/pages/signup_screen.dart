@@ -34,7 +34,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   Align(
                     alignment: Alignment.topLeft,
                     child: Text(
-                      "YOG",
+                      "Fitness For Life",
                       style: TextStyle(
                         color: Colors.blue.shade700,
                         fontSize: 30,
@@ -183,23 +183,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _createAccount(BuildContext context) async {
-  // Store the context before showing dialog
-  final BuildContext dialogContext = context;
-  
   showDialog(
-    context: dialogContext,
+    context: context,
     barrierDismissible: false,
-    builder: (BuildContext context) {
-      return const Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-          ),
-        ),
-      );
-    },
+    builder: (_) => const Center(child: CircularProgressIndicator()),
   );
 
   try {
@@ -207,39 +194,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
       email: emailController.text.trim(),
       password: passwordController.text.trim(),
     );
-    final uid = cred.user!.uid;
-    await FirestoreService.instance.setUserProfile(
+
+    if (!mounted) return;
+
+    Navigator.pop(context); // close loader
+
+    // 🔥 Navigate FIRST
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/home',
+      (route) => false,
+    );
+
+    // 🔥 Save profile AFTER navigation (non-blocking)
+    FirestoreService.instance.setUserProfile(
       UserProfile(
-        uid: uid, 
-        name: nameController.text.trim(), 
-        email: cred.user?.email
+        uid: cred.user!.uid,
+        name: nameController.text.trim(),
+        email: cred.user?.email,
+        finishedWorkouts: 0,
+        workoutsInProgress: 0,
+        timeSpentMinutes: 0.0,
       ),
     );
-    
-    // Dismiss dialog first
-    Navigator.pop(dialogContext);
-    
-    // Then navigate to home
-    Navigator.pushNamedAndRemoveUntil(
-      dialogContext, 
-      '/home', 
-      (route) => false
-    );
-    
+
   } on FirebaseAuthException catch (e) {
-    // Dismiss dialog on error
-    Navigator.pop(dialogContext);
-    
-    ScaffoldMessenger.of(dialogContext).showSnackBar(
+    if (!mounted) return;
+
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(e.message ?? 'Account creation failed'),
         backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 }
+
 
   @override
   void dispose() {

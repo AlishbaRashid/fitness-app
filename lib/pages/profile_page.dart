@@ -142,20 +142,18 @@ class ProfilePage extends StatelessWidget {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-            StreamBuilder<List<Workout>>(
-              stream: FirestoreService.instance.watchWorkouts(),
+            StreamBuilder<UserProfile?>(
+              stream: FirestoreService.instance.watchCurrentUserProfile(),
               builder: (context, snapshot) {
-                final workouts = snapshot.data ?? [];
-                final count = workouts.length;
-                int totalMinutes = 0;
-                for (final w in workouts) {
-                  totalMinutes += w.durationMinutes ?? 0;
-                }
-                final totalHours = (totalMinutes / 60).floor();
-                final remainingMinutes = totalMinutes % 60;
-                final totalTimeStr = totalMinutes == 0
+                final p = snapshot.data;
+                final finished = p?.finishedWorkouts ?? 0;
+                final inProgress = p?.workoutsInProgress ?? 0;
+                final minutes = p?.timeSpentMinutes ?? 0.0;
+                final hours = (minutes / 60).floor();
+                final remMins = minutes.round() % 60;
+                final timeStr = minutes == 0.0
                     ? '0m'
-                    : '${totalHours > 0 ? '${totalHours}h ' : ''}${remainingMinutes}m';
+                    : '${hours > 0 ? '${hours}h ' : ''}${remMins}m';
                 return GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -165,28 +163,28 @@ class ProfilePage extends StatelessWidget {
                   mainAxisSpacing: 15,
                   children: [
                     _buildStatCard(
-                      'Workouts Saved',
-                      '$count',
+                      'Finished',
+                      '$finished',
                       Icons.check_circle,
                       Colors.green,
                     ),
                     _buildStatCard(
-                      'Total Planned Time',
-                      totalTimeStr,
+                      'In Progress',
+                      '$inProgress',
+                      Icons.play_circle_fill,
+                      Colors.orange,
+                    ),
+                    _buildStatCard(
+                      'Time Spent',
+                      timeStr,
                       Icons.timer,
                       Colors.blue,
                     ),
                     _buildStatCard(
-                      'Current Streak',
+                      'Workouts Saved',
                       '—',
-                      Icons.local_fire_department,
-                      Colors.orange,
-                    ),
-                    _buildStatCard(
-                      'Calories Burned',
-                      '—',
-                      Icons.whatshot,
-                      Colors.red,
+                      Icons.bookmark,
+                      Colors.purple,
                     ),
                   ],
                 );

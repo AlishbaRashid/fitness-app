@@ -1,7 +1,8 @@
 // [file name]: home.dart
 // [file content begin]
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:term_project/services/firestore_service.dart';
+import 'package:term_project/models/user_profile.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -369,43 +370,21 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    _loadProgress();
   }
 
-  void _loadProgress() {
-    // In a real app, you would load from SharedPreferences or database
-    // For now, we'll use example data
-    setState(() {
-      _finishedWorkouts = 5; // Example: 5 completed workouts
-      _workoutsInProgress = 2; // Example: 2 workouts in progress
-      _timeSpentMinutes = 125.5; // Example: 125.5 minutes total
-    });
+  void _updateProgress(int workoutsCompleted, double additionalTime) async {
+    await FirestoreService.instance.incrementUserStats(
+      finishedDelta: workoutsCompleted,
+      inProgressDelta: workoutsCompleted > 0 ? -1 : 0,
+      timeDelta: additionalTime,
+    );
   }
 
-  void _updateProgress(int workoutsCompleted, double additionalTime) {
-    setState(() {
-      _finishedWorkouts += workoutsCompleted;
-      _timeSpentMinutes += additionalTime;
-      if (workoutsCompleted > 0) {
-        _workoutsInProgress = _workoutsInProgress > 0
-            ? _workoutsInProgress - 1
-            : 0;
-      }
-    });
-
-    // In a real app, save to SharedPreferences or database here
-  }
-
-  void _startWorkoutSession(
+  Future<void> _startWorkoutSession(
     BuildContext context,
     String workoutType,
     List<Map<String, dynamic>> exercises,
-  ) {
-    // Increment workouts in progress when starting
-    setState(() {
-      _workoutsInProgress++;
-    });
-
+  ) async {
     Navigator.pushNamed(
       context,
       '/workout_session',
@@ -480,70 +459,83 @@ class _HomeState extends State<Home> {
               const SizedBox(height: 30),
 
               // Stats Cards - UPDATED WITH DYNAMIC VALUES
-              Row(
-                children: [
-                  // Finished Card
-                  Expanded(
-                    child: _buildStatCard(
-                      "Finished",
-                      _finishedWorkouts.toString(),
-                      "Completed\nWorkouts",
-                      Colors.blue.shade50,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  // In Progress Card
-                  Expanded(
-                    child: _buildStatCard(
-                      "In progress",
-                      _workoutsInProgress.toString(),
-                      "Workouts",
-                      Colors.orange.shade50,
-                      Colors.orange,
-                    ),
-                  ),
-                ],
+              StreamBuilder<UserProfile?>(
+                stream: FirestoreService.instance.watchCurrentUserProfile(),
+                builder: (context, snapshot) {
+                  final profile = snapshot.data;
+                  final finished = profile?.finishedWorkouts ?? 0;
+                  final inProgress = profile?.workoutsInProgress ?? 0;
+                  final minutes = profile?.timeSpentMinutes ?? 0.0;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          "Finished",
+                          finished.toString(),
+                          "Completed\nWorkouts",
+                          Colors.blue.shade50,
+                          Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: _buildStatCard(
+                          "In progress",
+                          inProgress.toString(),
+                          "Workouts",
+                          Colors.orange.shade50,
+                          Colors.orange,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 15),
 
               // Time Spent Card - UPDATED WITH DYNAMIC VALUE
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Time spent",
-                      style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+              StreamBuilder<UserProfile?>(
+                stream: FirestoreService.instance.watchCurrentUserProfile(),
+                builder: (context, snapshot) {
+                  final minutes = snapshot.data?.timeSpentMinutes ?? 0.0;
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(15),
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${_timeSpentMinutes.toStringAsFixed(1)} Minutes",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade800,
-                          ),
+                          "Time spent",
+                          style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                         ),
-                        Icon(
-                          Icons.timer_outlined,
-                          color: Colors.green.shade800,
-                          size: 30,
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "${minutes.toStringAsFixed(1)} Minutes",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade800,
+                              ),
+                            ),
+                            Icon(
+                              Icons.timer_outlined,
+                              color: Colors.green.shade800,
+                              size: 30,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
 
               const SizedBox(height: 30),
@@ -570,11 +562,13 @@ class _HomeState extends State<Home> {
                       // Cardio Workout Card
                       GestureDetector(
                         onTap: () {
-                          // Start workout session directly
-                          _startWorkoutSession(
+                          Navigator.pushNamed(
                             context,
-                            'Cardio',
-                            _getCardioExercises(),
+                            '/workout_detail',
+                            arguments: {
+                              'workoutType': 'Cardio',
+                              'exercises': _getCardioExercises(),
+                            },
                           );
                         },
                         child: _buildWorkoutCard(
@@ -590,10 +584,13 @@ class _HomeState extends State<Home> {
                       // Arm Workout Card
                       GestureDetector(
                         onTap: () {
-                          _startWorkoutSession(
+                          Navigator.pushNamed(
                             context,
-                            'Arm',
-                            _getArmExercises(),
+                            '/workout_detail',
+                            arguments: {
+                              'workoutType': 'Arm',
+                              'exercises': _getArmExercises(),
+                            },
                           );
                         },
                         child: _buildWorkoutCard(
@@ -609,10 +606,13 @@ class _HomeState extends State<Home> {
                       // Leg Workout Card
                       GestureDetector(
                         onTap: () {
-                          _startWorkoutSession(
+                          Navigator.pushNamed(
                             context,
-                            'Leg',
-                            _getLegExercises(),
+                            '/workout_detail',
+                            arguments: {
+                              'workoutType': 'Leg',
+                              'exercises': _getLegExercises(),
+                            },
                           );
                         },
                         child: _buildWorkoutCard(
@@ -628,10 +628,13 @@ class _HomeState extends State<Home> {
                       // Core Workout Card
                       GestureDetector(
                         onTap: () {
-                          _startWorkoutSession(
+                          Navigator.pushNamed(
                             context,
-                            'Core',
-                            _getCoreExercises(),
+                            '/workout_detail',
+                            arguments: {
+                              'workoutType': 'Core',
+                              'exercises': _getCoreExercises(),
+                            },
                           );
                         },
                         child: _buildWorkoutCard(
@@ -647,10 +650,13 @@ class _HomeState extends State<Home> {
                       // Full Body Workout Card
                       GestureDetector(
                         onTap: () {
-                          _startWorkoutSession(
+                          Navigator.pushNamed(
                             context,
-                            'Full Body',
-                            _getFullBodyExercises(),
+                            '/workout_detail',
+                            arguments: {
+                              'workoutType': 'Full Body',
+                              'exercises': _getFullBodyExercises(),
+                            },
                           );
                         },
                         child: _buildWorkoutCard(

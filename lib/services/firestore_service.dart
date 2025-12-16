@@ -17,9 +17,62 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> _workoutExercises(
           String uid, String workoutId) =>
       _userWorkouts(uid).doc(workoutId).collection('exercises');
+  CollectionReference<Map<String, dynamic>> _userSessions(String uid) =>
+      _users.doc(uid).collection('sessions');
   Future<void> setUserProfile(UserProfile profile) async {
     try {
-      await _users.doc(profile.uid).set(profile.toMap(), SetOptions(merge: true));
+      final data = <String, dynamic>{'uid': profile.uid};
+      if (profile.name != null) data['name'] = profile.name;
+      if (profile.email != null) data['email'] = profile.email;
+      if (profile.avatarUrl != null) data['avatarUrl'] = profile.avatarUrl;
+      if (profile.heightCm != null) data['heightCm'] = profile.heightCm;
+      if (profile.weightKg != null) data['weightKg'] = profile.weightKg;
+      if (profile.finishedWorkouts != null) {
+        data['finishedWorkouts'] = profile.finishedWorkouts;
+      }
+      if (profile.workoutsInProgress != null) {
+        data['workoutsInProgress'] = profile.workoutsInProgress;
+      }
+      if (profile.timeSpentMinutes != null) {
+        data['timeSpentMinutes'] = profile.timeSpentMinutes;
+      }
+      await _users.doc(profile.uid).set(data, SetOptions(merge: true));
+    } catch (_) {
+      rethrow;
+    }
+  }
+  Future<void> logSession({
+    required String workoutType,
+    required int exercisesCount,
+    required double timeMinutes,
+    required bool completed,
+  }) async {
+    try {
+      if (_uid == null) throw Exception('Not authenticated');
+      await _userSessions(_uid!).add({
+        'workoutType': workoutType,
+        'exercisesCount': exercisesCount,
+        'timeMinutes': timeMinutes,
+        'completed': completed,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+    } catch (_) {
+      rethrow;
+    }
+  }
+  Future<void> incrementUserStats({
+    int finishedDelta = 0,
+    int inProgressDelta = 0,
+    double timeDelta = 0.0,
+  }) async {
+    try {
+      if (_uid == null) throw Exception('Not authenticated');
+      await _users.doc(_uid!).set({
+        'uid': _uid,
+        'finishedWorkouts': FieldValue.increment(finishedDelta),
+        'workoutsInProgress': FieldValue.increment(inProgressDelta),
+        'timeSpentMinutes': FieldValue.increment(timeDelta),
+      }, SetOptions(merge: true));
     } catch (_) {
       rethrow;
     }
@@ -75,9 +128,32 @@ class FirestoreService {
   }
   Stream<List<Workout>> watchWorkouts() {
     if (_uid == null) return const Stream.empty();
-    return _userWorkouts(_uid!).orderBy('createdAt', descending: true).snapshots().map(
-          (q) => q.docs.map((d) => Workout.fromMap(d.data())).toList(),
-        );
+    return _userWorkouts(_uid!)
+        .snapshots()
+        .map((q) {
+          final list = q.docs.map((d) => Workout.fromMap(d.data())).toList();
+          list.sort((a, b) {
+            final aTime = a.updatedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final bTime = b.updatedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return bTime.compareTo(aTime);
+          });
+          return list;
+        });
+  }
+  Stream<List<Workout>> watchWorkoutsByLevel(String level) {
+    if (_uid == null) return const Stream.empty();
+    return _userWorkouts(_uid!)
+        .where('level', isEqualTo: level)
+        .snapshots()
+        .map((q) {
+          final list = q.docs.map((d) => Workout.fromMap(d.data())).toList();
+          list.sort((a, b) {
+            final aTime = a.updatedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final bTime = b.updatedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return bTime.compareTo(aTime);
+          });
+          return list;
+        });
   }
   Future<void> updateWorkout(Workout workout) async {
     try {

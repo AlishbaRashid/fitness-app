@@ -18,9 +18,7 @@ class ProgressManager {
 
   void updateProgress(int workoutsCompleted, double additionalTime) {
     // This would update the home screen stats
-    if (_updateCallback != null) {
-      _updateCallback();
+    _updateCallback();
     }
-  }
 }
 // [file content end]

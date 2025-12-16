@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:term_project/pages/workout_session.dart';
 import 'package:term_project/services/firestore_service.dart';
 import 'package:term_project/models/exercise.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:term_project/models/user_profile.dart';
 
 class WorkoutDetailPage extends StatelessWidget {
   const WorkoutDetailPage({super.key});
@@ -159,6 +161,43 @@ class WorkoutDetailPage extends StatelessWidget {
     String workoutType,
     List<Map<String, dynamic>> exercises,
   ) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+      FirebaseAuth.instance.signInAnonymously().then((cred) async {
+        await FirestoreService.instance.setUserProfile(
+          UserProfile(
+            uid: cred.user!.uid,
+            finishedWorkouts: 0,
+            workoutsInProgress: 0,
+            timeSpentMinutes: 0.0,
+          ),
+        );
+        Navigator.of(context).pop();
+        _showStartDialog(context, workoutType, exercises);
+      }).catchError((e) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to prepare tracking: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      });
+      return;
+    }
+    _showStartDialog(context, workoutType, exercises);
+  }
+
+  void _showStartDialog(
+    BuildContext context,
+    String workoutType,
+    List<Map<String, dynamic>> exercises,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -289,14 +328,41 @@ class WorkoutDetailPage extends StatelessWidget {
   String _calculateTotalTime(List<Map<String, dynamic>> exercises) {
     int totalSeconds = 0;
     for (var exercise in exercises) {
-      String duration = exercise['duration'];
-      // Extract seconds from duration string (e.g., "30 seconds" -> 30)
-      try {
-        int seconds = int.tryParse(duration.split(' ')[0]) ?? 0;
-        totalSeconds += seconds;
-      } catch (e) {
-        totalSeconds += 30; // Default to 30 seconds if parsing fails
+      final dynamic raw = exercise['duration'];
+      if (raw == null) {
+        totalSeconds += 30;
+        continue;
       }
+      final String duration = raw.toString().trim().toLowerCase();
+      if (duration.contains('second')) {
+        final n = int.tryParse(duration.split(' ').first) ?? 30;
+        totalSeconds += n;
+        continue;
+      }
+      if (duration.endsWith(' sec') || duration.endsWith(' s')) {
+        final n = int.tryParse(duration.split(' ').first) ?? 30;
+        totalSeconds += n;
+        continue;
+      }
+      if (duration.contains('minute')) {
+        final n = int.tryParse(duration.split(' ').first) ?? 1;
+        totalSeconds += n * 60;
+        continue;
+      }
+      if (duration.endsWith(' min')) {
+        final n = int.tryParse(duration.split(' ').first) ?? 1;
+        totalSeconds += n * 60;
+        continue;
+      }
+      if (RegExp(r'^\d+:\d{2}$').hasMatch(duration)) {
+        final parts = duration.split(':');
+        final minutes = int.tryParse(parts[0]) ?? 0;
+        final seconds = int.tryParse(parts[1]) ?? 0;
+        totalSeconds += minutes * 60 + seconds;
+        continue;
+      }
+      final asInt = int.tryParse(duration);
+      totalSeconds += asInt ?? 30;
     }
     int totalMinutes = (totalSeconds / 60).ceil();
     return totalMinutes.toString();

@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.topLeft,
                     child: Text(
-                      "YOG",
+                      "Fitness For Life",
                       style: TextStyle(
                         color: Colors.blue.shade700,
                         fontSize: 30,
@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 15),
 
-                  Image.asset("assets/yoga_signup.png", height: 200),
+                  // Image.asset("assets/yoga_signup.png", height: 200),
 
                   const SizedBox(height: 30),
 
@@ -152,52 +152,41 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
     Future<void> _loginUser(BuildContext context) async {
-    // Store the context before showing dialog
-    final BuildContext dialogContext = context;
-    
-    showDialog(
-      context: dialogContext,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(child: CircularProgressIndicator());
-      },
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
     );
 
-    try {
-      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
-      final uid = cred.user?.uid;
-      if (uid != null) {
-        await FirestoreService.instance.setUserProfile(
-          UserProfile(uid: uid, email: cred.user?.email),
-        );
-      }
-      
-      // Dismiss dialog first
-      Navigator.pop(dialogContext);
-      
-      // Then navigate to home
-      Navigator.pushNamedAndRemoveUntil(
-        dialogContext, 
-        '/home', 
-        (route) => false
-      );
-      
-    } on FirebaseAuthException catch (e) {
-      // Dismiss dialog on error
-      Navigator.pop(dialogContext);
-      
-      ScaffoldMessenger.of(dialogContext).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? 'Login failed'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    if (!mounted) return;
+
+    Navigator.pop(context); // close loader
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/home',
+      (route) => false,
+    );
+  } on FirebaseAuthException catch (e) {
+    if (!mounted) return;
+
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.message ?? 'Login failed'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
+}
+
 
   @override
   void dispose() {

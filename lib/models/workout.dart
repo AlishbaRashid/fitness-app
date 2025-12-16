@@ -3,6 +3,7 @@ class Workout {
   final String title;
   final String? description;
   final int? durationMinutes;
+  final String? level; // 'Beginner' | 'Intermediate' | 'Advanced'
   final DateTime? createdAt;
   final DateTime? updatedAt;
   const Workout({
@@ -10,6 +11,7 @@ class Workout {
     required this.title,
     this.description,
     this.durationMinutes,
+    this.level,
     this.createdAt,
     this.updatedAt,
   });
@@ -19,16 +21,19 @@ class Workout {
       'title': title,
       'description': description,
       'durationMinutes': durationMinutes,
+      'level': level,
       'createdAt': createdAt?.millisecondsSinceEpoch,
       'updatedAt': updatedAt?.millisecondsSinceEpoch,
     };
   }
+
   factory Workout.fromMap(Map<String, dynamic> map) {
     return Workout(
       id: map['id'] as String,
       title: map['title'] as String,
       description: map['description'] as String?,
       durationMinutes: (map['durationMinutes'] as num?)?.toInt(),
+      level: map['level'] as String?,
       createdAt: map['createdAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int)
           : null,
@@ -42,6 +47,7 @@ class Workout {
     String? title,
     String? description,
     int? durationMinutes,
+    String? level,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -50,6 +56,7 @@ class Workout {
       title: title ?? this.title,
       description: description ?? this.description,
       durationMinutes: durationMinutes ?? this.durationMinutes,
+      level: level ?? this.level,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

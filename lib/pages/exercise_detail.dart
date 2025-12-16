@@ -1,5 +1,6 @@
 // TODO Implement this library.
 import 'package:flutter/material.dart';
+import 'package:term_project/pages/workout_session.dart';
 
 class ExerciseDetailPage extends StatelessWidget {
   const ExerciseDetailPage({super.key});
@@ -8,12 +9,29 @@ class ExerciseDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final args =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final Map<String, dynamic> exercise = args['exercise'];
+    final Map<String, dynamic> exercise =
+        args['exercise'] ?? <String, dynamic>{};
+    final String name = (exercise['name'] as String?) ?? 'Exercise';
+    final String description =
+        (exercise['description'] as String?) ?? 'No description available.';
+    final String duration =
+        (exercise['duration'] as String?) ??
+        (exercise['sets'] as String?) ??
+        'N/A';
+    final String reps = (exercise['reps'] as String?) ?? 'N/A';
+    final String difficulty = (exercise['difficulty'] as String?) ?? 'Unknown';
+    final String musclesTargeted =
+        (exercise['musclesTargeted'] as String?) ?? 'Full Body';
+    final String equipment = (exercise['equipment'] as String?) ?? 'None';
+    final String instructions =
+        (exercise['instructions'] as String?) ?? 'No instructions provided.';
+    final String benefits =
+        (exercise['benefits'] as String?) ?? 'No benefits listed.';
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(exercise['name']),
+        title: Text(name),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -40,7 +58,7 @@ class ExerciseDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 15),
                   Text(
-                    exercise['name'],
+                    name,
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -49,7 +67,7 @@ class ExerciseDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    exercise['description'],
+                    description,
                     style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                     textAlign: TextAlign.center,
                   ),
@@ -60,17 +78,11 @@ class ExerciseDetailPage extends StatelessWidget {
             const SizedBox(height: 30),
 
             // Exercise Details
-            _buildDetailRow(
-              'Duration',
-              exercise['duration'] ?? exercise['sets'],
-            ),
-            _buildDetailRow('Repetitions', exercise['reps']),
-            _buildDetailRow('Difficulty', exercise['difficulty']),
-            _buildDetailRow(
-              'Muscles Targeted',
-              exercise['musclesTargeted'] ?? 'Full Body',
-            ),
-            _buildDetailRow('Equipment', exercise['equipment'] ?? 'None'),
+            _buildDetailRow('Duration', duration),
+            _buildDetailRow('Repetitions', reps),
+            _buildDetailRow('Difficulty', difficulty),
+            _buildDetailRow('Muscles Targeted', musclesTargeted),
+            _buildDetailRow('Equipment', equipment),
 
             const SizedBox(height: 30),
 
@@ -87,7 +99,7 @@ class ExerciseDetailPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                exercise['instructions'],
+                instructions,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[700],
@@ -111,7 +123,7 @@ class ExerciseDetailPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                exercise['benefits'],
+                benefits,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.green.shade800,
@@ -149,7 +161,25 @@ class ExerciseDetailPage extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      // Start exercise functionality
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => WorkoutSessionPage(
+                            workoutType: name,
+                            exercises: [exercise],
+                            onWorkoutCompleted: (workoutsCompleted, timeSpent) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Exercise completed: ${timeSpent.toStringAsFixed(1)} minutes',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
@@ -176,7 +206,7 @@ class ExerciseDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String title, String value) {
+  Widget _buildDetailRow(String title, String? value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -191,7 +221,7 @@ class ExerciseDetailPage extends StatelessWidget {
             ),
           ),
           Text(
-            value,
+            value ?? 'N/A',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
